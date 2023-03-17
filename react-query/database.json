@@ -1,0 +1,5 @@
+{
+  "data": {
+    "query": "\n                query {\n                    posts {\n                        data {\n                            id\n                            title\n                        }\n                    }\n                }\n            "
+  }
+}

@@ -1,74 +1,136 @@
-import axios from 'axios'
+import axios from 'axios';
 import React, { useEffect, useState } from 'react';
-import {useMutation, useQuery, useQueryClient} from 'react-query'
+import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { request, gql } from 'graphql-request';
+import { GetStudentsData } from './query/queryGraphQL.js';
 import './App.css';
+import { Typography, Box, Button, Grid, Input, TextField, ListItemText, ListItemButton } from '@mui/material';
+import { Stack } from '@mui/system';
+import PersonIcon from '@mui/icons-material/Person';
+import { green } from '@mui/material/colors';
+import GetStudents from './GetStudents';
 
-const students=[
-  {
-    id: 1, name:'Nhat'
-  },
-  {
-    id: 2, name: 'Nguyen'
-  }
-]
+const students = [
+    {
+        id: 1,
+        name: 'nhat',
+        age: 22,
+    },
+    {
+        id: 2,
+        name: 'Nguyen',
+        age: 10,
+    },
+];
 
 function App() {
-  const queryClient = useQueryClient()
-  const getStudentsFunction = () => {
-    return [...students]
-  }
-  const getStudents = useQuery({
-    queryKey: 'students',
-    queryFn: getStudentsFunction,
-  })
-  
-  const addNewStudent = (name) => {
-    return students.push({
-      id: Math.floor(Math.random() * 8) + 3,
-      name: name
-    })
-  }
+    const [newName, setNewName] = useState('');
+    const [newAge, setNewAge] = useState('');
+    const [currentId, setCurrentId] = useState(2);
+    const queryClient = useQueryClient(); // return the QueryClient instance
+    const getStudents = () => {
+        // Call API here, tạm thời chưa tìm được API thích hợp
+        return [...students];
+    };
 
-  const newMutation = useMutation({
-    mutationFn: addNewStudent,
-    onSuccess: () => {
-      queryClient.invalidateQueries('students')
+    const fetchGQL = async () => {
+        const data = await request('http://localhost:3333/graphql', GetStudentsData);
+        console.log(data.students);
+        return data.students;
+    };
+
+    // const fetchAPI = async () => {
+    //     const result = await axios.get('http://jsonplaceholder.typicode.com/posts?_start=0&_limit=5%27')
+    //     return result.data
+    //   }
+    // const { isLoading, isError, data } = useQuery({
+    //     queryKey: ['student'],
+    //     queryFn: getStudents,
+    //     retry: 0,
+    // });
+
+    const { isLoading, isError, data } = useQuery({
+        queryKey: ['student'],
+        queryFn: getStudents,
+        retry: 0,
+    });
+
+    const addNewStudent = (name, age) => {
+        return students.push({
+            id: setCurrentId((currentId) => currentId + 1),
+            name: newName,
+            age: newAge,
+        });
+    };
+
+    const newMutation = useMutation({
+        mutationFn: addNewStudent,
+        onSuccess: () => {
+            queryClient.invalidateQueries('student');
+        },
+    });
+    if (isLoading) {
+        return <span>Loading ... </span>;
     }
-  })
-  
-  console.log(students)
-
-  
-
-  // const fetchAPI = async () => {
-  //   const data = axios.get('https://jsonplaceholder.typicode.com/posts')
-  //   return data
-  // }
-  // const {isLoading, isError} = useQuery('fetchAPI', fetchAPI) 
-  // if (isLoading) {
-  //   return <span>Loading ... </span>
-  // }
-  // else if (isError) {
-  //   return <span>Error happening!!!</span>
-  // }
-
-   if (getStudents.isLoading) {
-      return <span>Loading ... </span>
-    }
-    if (getStudents.isError) {
-      return <span>Error happening!!!</span>
+    if (isError) {
+        return <span>Error happening!!!</span>;
     }
 
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        newMutation.mutate({ newName, newAge });
+    };
 
-  return (
-    <div className="App">
-        <h2>Hello react query</h2>
-        {getStudents.data.map(student=> (
-          <div key={student.id}>{student.name}</div>
-        ))}
-        <button disabled={newMutation.isLoading} onClick={()=> newMutation.mutate('Duy Hoang')}>Add new student</button>
-    </div>
-  )
+    return (
+        <div className="App">
+            <Stack spacing={3} marginBottom={3}>
+                <Typography sx={{ fontFamily: 'cursive' }} variant="h3" padding={2} bgcolor="#1565c0" color="white">
+                    Create New Student with React Query
+                </Typography>
+                <Grid container spacing={3}>
+                    <Grid item xs={6}>
+                        <Box sx={{ textAlign: 'left' }}>
+                            <Typography variant="h4">Current number of students: {currentId}</Typography>
+                            {data?.map((student) => (
+                                <ListItemButton component="a">
+                                    <PersonIcon sx={{ marginRight: '10px' }} />
+                                    <ListItemText primary={`Name: ${student.name}, Age: ${student.age}`} />
+                                </ListItemButton>
+                            ))}
+                        </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                        <form onSubmit={handleSubmit}>
+                            <Stack>
+                                <TextField
+                                    label="name"
+                                    name="name"
+                                    sx={{ marginRight: 10, marginBottom: 3 }}
+                                    onChange={(e) => setNewName(e.target.value)}
+                                ></TextField>
+                                <TextField
+                                    label="age"
+                                    name="age"
+                                    sx={{ marginRight: 10, marginBottom: 3 }}
+                                    onChange={(e) => setNewAge(e.target.value)}
+                                ></TextField>
+                                <Button
+                                    sx={{ marginRight: 10, marginBottom: 3, padding: 2 }}
+                                    type="submit"
+                                    variant="contained"
+                                    color="primary"
+                                >
+                                    {' '}
+                                    Create new user
+                                </Button>
+                            </Stack>
+                        </form>
+                    </Grid>
+                </Grid>
+            </Stack>
+            <GetStudents />
+        </div>
+    );
 }
 
 export default App;
